@@ -1,0 +1,8 @@
+<% /* Note: This is injected into `views/layouts/layout-email.ejs` */ %>
+<div>
+<p style="margin-bottom: 25px;">Dear <%= overdueThing.borrowedBy.fullName %>,</p>
+<p style="margin-bottom: 25px;">This is a friendly reminder that <%= overdueThing.label %> is due to be returned on <%= new Date(overdueThing.expectedReturnAt).toDateString()%></p>
+<p style="margin-bottom: 25px;">Feel free to reach out to <a href="<%= overdueThing.owner.emailAddress %>"><%= overdueThing.owner.fullName%></a> if you need.</p>
+<p style="margin-bottom: 5px;">Sincerely,</p>
+<p style="margin-top: 0px;">The ration Team</p>
+</div>

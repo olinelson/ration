@@ -1,0 +1,275 @@
+<div id="available-things" class="container" v-cloak>
+
+
+
+  <h1>Things</h1>
+ 
+  <p>View available items to borrow or upload your own things.</p>
+
+
+  <button class="btn btn-primary" @click="clickCreateNewThing">Create New Thing</button>
+
+  <hr/>
+  
+
+ 
+
+  <div class="card-columns">
+
+      <!-- thing card -->
+      
+      <div v-for="thing in things" @mouseover="onHover(thing.id)" @mouseleave="onHover(null)" class="card" >
+
+        <div class="dropdown">
+          <button class="dropdown-button btn btn-secondary dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <i class="fa fa-ellipsis-v" aria-hidden="true"></i>
+          </button>
+
+          <div class="dropdown-menu" aria-labelledby="dropdownMenu2">
+
+            <%// If I own this thing show delete%>
+            <button v-if="me.id === thing.owner.id" class=" dropdown-item"  @click="clickDeleteThing(thing.id)" >Delete</button>
+            <%// If I own this thing and it is borrowd, show mark as returned%>
+            <button v-if="me.id === thing.owner.id && thing.borrowedBy" @click="clickOwnerReturnThing(thing.id)" class="dropdown-item" type="button">Mark As Returned</button> 
+            <%// If I don't own this thing and it isn't being borrowed by anybody%>
+            <button v-if="me.id !== thing.owner.id && !thing.borrowedBy" @click="clickBorrowThing(thing.id)" class="dropdown-item" type="button">Borrow</button>
+             <%// If I don't own this thing and I am borrowing it%>
+            <button v-if="me.id !== thing.owner.id && thing.borrowedBy && thing.borrowedBy.id === me.id" @click="clickReturnThing(thing.id)" class="dropdown-item" type="button">Return</button>
+            </div>
+        </div>
+
+      <img class="img-fluid" :src="thing.imageSrc">
+      <div class="card-body">
+        <h5 class="card-title">{{thing.label}}</h5>
+        <%//if this is mine and not borrowed show mine%>
+         <span v-if="me.id === thing.owner.id && !thing.borrowedBy" class="badge badge-pill badge-primary">
+          <i class="fa fa-home" aria-hidden="true"></i>
+          mine
+        </span>
+        <%// if this is not mine and I'm borrowing show 'borrrowing'%>
+        <div v-if="thing.owner.id !== me.id && thing.borrowedBy  &&  thing.borrowedBy.id=== me.id">
+        <p class="text-success" >
+          <i class="fa fa-star-o" aria-hidden="true"></i> Borrowing
+        </p>
+        <small>Return On {{new Date(thing.expectedReturnAt).toDateString()}}</small>
+        </div>
+
+       <% // if this is not mine and I'm not borrowing show user's name%>
+         <span v-if="thing.owner.id !== me.id && !thing.borrowedBy " class="badge badge-pill badge-secondary">
+         <i class="fa fa-user" aria-hidden="true"></i>
+         {{thing.owner.fullName}}
+         </span>
+         <%//if this is mine but it's being borrowed by someone else%>
+         <div v-if="thing.owner.id === me.id && thing.borrowedBy">
+          <p>
+          Borrowed By
+          <span class="badge badge-pill badge-secondary">
+          <i class="fa fa-user" aria-hidden="true"></i>
+          {{thing.borrowedBy.fullName}}
+          </span>
+          </p>
+
+          <p>Expected Return:</p>
+          <p>{{new Date(thing.expectedReturnAt).toDateString()}}</p>
+
+         </div>
+         
+
+      </div>
+
+     
+  </div>
+
+  </div>
+
+<% /* Confirm Delete Thing Modal */%>
+<modal @close="closeConfirmDeleteThingModal()" v-if="confirmDeleteThingModalOpen && selectedThing">
+  <ajax-form action="destroyOneThing" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingDeleteThingForm" @submitted="submittedDeleteThingForm()">
+
+    <div  class="modal-header">
+
+
+    <h5 class="modal-title">Delete {{selectedThing.label}} ?</h5>
+    <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+    </button>
+    </div>
+    <div class="modal-body">
+    <p class="text-danger" v-if="cloudError"><small>An error occured while processing your request. Please check your information and try again, or <a href="/contact">contact support</a> if the error persists.</small></p>
+    <p>Are you sure you want to delete {{selectedThing.label}}? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-dismiss="modal">Never Mind</button>
+    <ajax-button type="submit" :syncing="syncing" class="btn btn-danger ml-1">Delete</ajax-button>
+    </div>
+  </ajax-form>
+</modal>
+
+<% /* Create New Thing Modal */%>
+<modal @close="closeCreateNewThingModal()"  v-if="createNewThingModalOpen">
+  <ajax-form action="uploadThing" :handle-parsing="handleParsingUploadThingForm" @submitted="submittedUploadThingForm($event)"  :syncing.sync="syncing":cloud-error.sync="cloudError" >
+
+    <div  class="modal-header">
+
+
+    <h5 class="modal-title">Create New Thing</h5>
+    <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+    </button>
+    </div>
+    <div class="modal-body">
+    <p class="text-danger" v-if="cloudError"><small>An error occured while processing your request. Please check your information and try again, or <a href="/contact">contact support</a> if the error persists.</small></p>
+   
+   <div>
+   <p>Add a photo:</p>
+   <hr/>
+    <div class="two-column-grid">
+       <img  :src="uploadFormData.previewImageSrc" class="card-img-top" alt="...">
+       <div>
+        
+          <input type="file" :disabled="syncing" accept="image/*" class="file-input" @change="changeFileInput($event.target.files)"/>
+         
+
+        <hr class="invisible"/>
+
+        <small><span class="font-weight-bold">Tip:</span> make sure your item is forn and center so people know exactly</small>
+       </div>
+    </div>
+   </div>
+
+    <div>
+      <hr/>
+      <p>What is it?</p>
+
+        <input class="form-control" type="text" v-model="uploadFormData.label" placeholder="Waffle Iron">
+
+    </div>
+    
+    </div>
+    <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+    <ajax-button type="submit" :syncing="syncing" class="btn btn-primary ml-1">Create</ajax-button>
+    </div>
+  </ajax-form>
+</modal>
+
+<% // borrow modal%>
+<modal @close="closeBorrowThingModal()" v-if="borrowThingModalOpen && selectedThing">
+  <ajax-form action="borrowThing" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingBorrowThingForm" @submitted="submittedBorrowThingForm($event)">
+    <div  class="modal-header">
+    <h5 class="modal-title">Borrow {{selectedThing.label}}?</h5>
+    <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+    </button>
+    </div>
+    <div class="modal-body">
+    <p class="text-danger" v-if="cloudError"><small>An error occured while processing your request. Please check your information and try again, or <a href="/contact">contact support</a> if the error persists.</small></p>
+
+    <p>How long would you like it for?</p>
+    <div class="input-group mb-3">
+      <div class="input-group-prepend">
+      <span class="input-group-text" id="basic-addon1">Until</span>
+      </div>
+      <input required :min="new Date()" class="form-control" @change="setExpectedReturnAtForSelectedEvent($event.target.valueAsNumber)"  type="date"/>
+    </div>
+
+    
+    <div class="form-group">
+      <label>When can you pick it up?</label>
+      <input required v-model="whenToPickUpThingMessage"  class="form-control" placeholder="any time after 3pm tomorrow..." type="text"/>
+    </div>
+
+
+ 
+    </div>
+    <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-dismiss="modal">Never Mind</button>
+    <ajax-button type="submit" :syncing="syncing" class="btn btn-primary ml-1">Borrow</ajax-button>
+    </div>
+  </ajax-form>
+</modal>
+
+<% // borrow success modal%>
+<modal @close="closeBorrowThingSuccessModal()" v-if="borrowThingSuccessModalOpen && selectedThing">
+    <div  class="modal-header">
+      <h5 class="modal-title">Borrow {{selectedThing.label}}</h5>
+      <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>We let the owner of <a href="#">{{selectedThing.label}}</a> know when you would like to pick it up.</p>
+      <p>Stay in touch with <a href="#">{{selectedThing.owner.fullName}}</a> to confirm pickup details</p>
+      <a :href="'mailto:' + selectedThing.owner.email">{{selectedThing.owner.emailAddress}}</a>
+    </div>
+    <div class="modal-footer">
+    <button @click="closeBorrowThingSuccessModal()" type="button" class="btn btn-secondary" data-dismiss="modal">Ok</button>
+    </div>
+</modal>
+
+<% // return thing modal%>
+<modal @close="closeReturnThingModal()" v-if="returnThingModalOpen && selectedThing">
+  <ajax-form action="returnThing" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingReturnThingForm" @submitted="submittedReturnThingForm($event)">
+    <div  class="modal-header">
+      <h5 class="modal-title">Return {{selectedThing.label}}?</h5>
+      <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="text-danger" v-if="cloudError"><small>An error occured while processing your request. Please check your information and try again, or <a href="/contact">contact support</a> if the error persists.</small></p>
+      <p>When can you drop it off?</p>
+      <input class="form-control" v-model="whenToDropOffThingMessage" placeholder="Sometime tomorrow..."/>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-dismiss="modal">Never Mind</button>
+      <ajax-button type="submit" :syncing="syncing" class="btn btn-primary ml-1">Return</ajax-button>
+    </div>
+  </ajax-form>
+</modal>
+
+<% // return thing success modal%>
+<modal @close="closeReturnThingSuccessModal()" v-if="returnThingSuccessModalOpen && selectedThing">
+    <div  class="modal-header">
+      <h5 class="modal-title">Return {{selectedThing.label}}</h5>
+      <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+      <div class="modal-body">
+        <p>We let the owner of <a href="#">{{selectedThing.label}}</a> know when you would like to return it.</p>
+        <p>Stay in touch with <a href="#">{{selectedThing.owner.fullName}}</a> to confirm return details</p>
+        <a :href="'mailto:' + selectedThing.owner.email">{{selectedThing.owner.emailAddress}}</a>
+      </div>
+      <div class="modal-footer">
+       <button type="button" class="btn btn-secondary" data-dismiss="modal">Got It</button>
+    </div>
+</modal>
+
+<% // owner return thing modal%>
+<modal @close="closeOwnerReturnThingModal()" v-if="ownerReturnThingModalOpen && selectedThing">
+  <ajax-form action="ownerReturnThing" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingOwnerReturnThingForm" @submitted="submittedOwnerReturnThingForm($event)">
+    
+    <div  class="modal-header">
+      <h5 class="modal-title">Mark {{selectedThing.label}} as returned?</h5>
+      <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="text-danger" v-if="cloudError"><small>An error occured while processing your request. Please check your information and try again, or <a href="/contact">contact support</a> if the error persists.</small></p>
+      <p>Are you sure you want to return {{selectedThing.label}}?</p>
+      <p> You should only do this if {{selectedThing.borrowedBy.fullName}} has actually returned it...</p>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-dismiss="modal">Never Mind</button>
+      <ajax-button type="submit" :syncing="syncing" class="btn btn-primary ml-1">Mark as Returned</ajax-button>
+    </div>
+  </ajax-form>
+</modal>
+
+
+</div>
+<%- /* Expose server-rendered data as window.SAILS_LOCALS :: */ exposeLocalsToBrowser() %>

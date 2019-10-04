@@ -1,0 +1,179 @@
+<div id="friends" class="container" v-cloak>
+
+  <h1>Friends</h1>
+  <button class="btn btn-primary" @click="openAddFriendsModal">Invite Friends</button>
+
+  <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">Email</th>
+      <th scope="col"></th>
+      <th scope="col"></th>
+
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-for="friend in friends">
+      <td>{{friend.fullName}}</td>
+      <td>{{friend.emailAddress}}</td>
+      <td>
+        <button class="btn btn-danger btn-sm" @click="selectFriend(friend, 'unFriend')">Un Friend</button>
+      </td>
+      <!-- <td>pending approval</td> -->
+    </tr>
+    <tr v-for="friend in inboundFriendRequests">
+      <td>{{friend.fullName}}</td>
+      <td>{{friend.emailAddress}}</td>
+      <td><span class="badge badge-warning">Pending</span></td>
+      <td>
+        <button @click="selectFriend(friend, 'approveFriend')" class="btn btn-success btn-sm">Approve</button>
+        <button @click="selectFriend(friend, 'declineFriend')" class="btn btn-danger btn-sm">Decline</button>
+
+      </td>
+    </tr>
+
+    <tr v-for="friend in outboundFriendRequests">
+      <td>{{friend.fullName}}</td>
+      <td>{{friend.emailAddress}}</td>
+      <td><span class="badge badge-warning">Pending</span></td>
+      <td>
+        
+        <button class="btn btn-danger btn-sm" @click="selectFriend(friend, 'cancelFriendRequest')">Cancel Request</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<% // Invoite Friends Modal%>
+<modal @close="closeAddFriendsModal()" v-if="addFriendsModalOpen">
+  <ajax-form action="addFriends" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingAddFriendsForm" @submitted="submittedAddFriendsForm($event)">
+    
+    <div  class="modal-header">
+      <h5 class="modal-title">Invite Friends</h5>
+      <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="row">
+          <div class="col">
+            <label>Full Name</label>
+          </div>
+          <div class="col">
+            <label>Email Address</label>
+          </div>
+      </div>
+
+      <div>
+          <div v-for="friend in newFriends" class="row">
+            <div class="col">
+              <input v-model="friend.fullName"  type="text" class="form-control" :placeholder="friend.placeholderFullName">
+            </div>
+            <div class="col">
+              <input v-model="friend.emailAddress"  type="text" class="form-control" :placeholder="friend.placeholderEmailAddress">
+            </div>
+          </div>
+      </div>
+      <button type="button" @click="addFriendSlot" class="btn btn-secondary">Add</button>
+
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-dismiss="modal">Never Mind</button>
+      <ajax-button type="submit" :syncing="syncing" class="btn btn-primary ml-1">Invite Friends</ajax-button>
+    </div>
+  </ajax-form>
+</modal>
+
+<!-- unFriend modal -->
+<modal @close="closeAllModals()" v-if="unFriendModalOpen">
+<ajax-form action="unFriend" @submitted="submittedUnFriendForm($event)" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingUnFriendForm">
+  <div  class="modal-header">
+        <h5 class="modal-title">Un Friend {{selectedFriend.fullName}}</h5>
+        <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+  </div>
+
+  <div class="modal-body">
+    <p>Are you sure you want to un friend {{selectedFriend.fullName}}?</p>
+  </div>
+
+  <div class="modal-footer">
+   <ajax-button class="btn btn-danger btn-sm" type='submit'>Un Friend</ajax-button>
+  </div>
+         
+  </ajax-form>
+</modal>
+
+<!-- cancelFriendRequest modal -->
+<modal @close="closeAllModals()" v-if="cancelFriendRequestModalOpen">
+   <ajax-form action="cancelFriendRequest" @submitted="submittedCancelFriendRequestForm($event)" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingCancelFriendRequestForm">
+  <div  class="modal-header">
+        <h5 class="modal-title">Cancel Friend Request</h5>
+        <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+  </div>
+
+  <div class="modal-body">
+    <p>Are you sure you want to cancel your friend request to {{selectedFriend.fullName}}?</p>
+  </div>
+
+  <div class="modal-footer">
+   <ajax-button class="btn btn-danger btn-sm" type='submit'>Cancel Request</ajax-button>
+  </div>
+         
+  </ajax-form>
+</modal>
+
+<!-- approve friend  -->
+<modal @close="closeAllModals()" v-if="approveFriendModalOpen">
+   <ajax-form action="approveFriend" @submitted="submittedApproveFriendForm($event)" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingApproveFriendForm">
+  <div  class="modal-header">
+        <h5 class="modal-title">Approve {{selectedFriend.fullName}}?</h5>
+        <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+  </div>
+
+  <div class="modal-body">
+    <p>Are you sure you want to approve {{selectedFriend.fullName}} to be your friend?</p>
+  </div>
+
+  <div class="modal-footer">
+   <ajax-button class="btn btn-success btn-sm" type='submit'>Approve</ajax-button>
+  </div>
+         
+  </ajax-form>
+</modal>
+
+<!-- decline friend modal -->
+<modal @close="closeAllModals()" v-if="declineFriendModalOpen">
+   <ajax-form action="declineFriendRequest" @submitted="submittedDeclineFriendRequestForm($event)" :syncing.sync="syncing":cloud-error.sync="cloudError" :handle-parsing="handleParsingDeclineFriendRequestForm">
+  <div  class="modal-header">
+        <h5 class="modal-title">Decline {{selectedFriend.fullName}}?</h5>
+        <button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+  </div>
+
+  <div class="modal-body">
+    <p>Are you sure you want to Decline {{selectedFriend.fullName}} to be your friend?</p>
+  </div>
+
+  <div class="modal-footer">
+   <ajax-button class="btn btn-danger btn-sm" type='submit'>Decline</ajax-button>
+  </div>
+         
+  </ajax-form>
+</modal>
+ 
+          
+
+
+</div>
+<%- /* Expose server-rendered data as window.SAILS_LOCALS :: */ exposeLocalsToBrowser() %>
