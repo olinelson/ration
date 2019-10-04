@@ -221,7 +221,7 @@ module.exports = {
     *                                                                          *
     ***************************************************************************/
     cookie: {
-      secure: false, //can only be true if used with ssl certificate
+      secure: true,
       maxAge: 24 * 60 * 60 * 1000,  // 24 hours
     },
 
